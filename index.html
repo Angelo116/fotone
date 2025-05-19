@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Simulazione Spettro Fotone sincronizzato</title>
+  <style>
+    body {
+      margin: 0;
+      background: white;
+      color: black;
+      font-family: sans-serif;
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      margin: auto;
+      background: white;
+    }
+    .controls {
+      margin: 20px;
+    }
+    input[type="range"] {
+      width: 80%;
+    }
+    .info {
+      font-size: 18px;
+      margin-top: 10px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Spettro Elettromagnetico (luce visibile)</h2>
+
+<div class="controls">
+  <input type="range" id="spectrum" min="0" max="100" value="0" />
+  <div class="info" id="infoDisplay">
+    Lunghezza d'onda: -- nm | Frequenza: --
+  </div>
+</div>
+
+<canvas id="canvas" width="1000" height="500"></canvas>
+
+<script>
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const centerY = height / 2;
+  const amplitude = 60;
+  let time = 0;
+
+  const spectrumSlider = document.getElementById("spectrum");
+  const infoDisplay = document.getElementById("infoDisplay");
+
+  let photonColor = "red";
+  let frequency = 0.02;
+  let wavelength = 200;
+
+  const minWavelengthNM = 380;
+  const maxWavelengthNM = 750;
+
+  // Velocità comune onda e fotone (modifica questo per cambiare velocità)
+  const speedFactor = 1.5;
+
+  function getColorFromSlider(value) {
+    const colors = [
+      "#ff0000", "#ff4000", "#ff8000", "#ffaa00", "#ffff00",
+      "#aaff00", "#55ff00", "#00ff00", "#00ffaa", "#00ffff",
+      "#00aaff", "#0055ff", "#0000ff", "#4000ff", "#8000ff", "#aa00ff", "#ff00ff"
+    ];
+    const index = Math.floor(value / 6);
+    return colors[Math.min(index, colors.length - 1)];
+  }
+
+  function updateWaveParams(sliderValue) {
+    const minLambdaPixel = 100;
+    const maxLambdaPixel = 400;
+    wavelength = maxLambdaPixel - (sliderValue / 100) * (maxLambdaPixel - minLambdaPixel);
+
+    frequency = 0.015 + (sliderValue / 100) * 0.05;
+
+    photonColor = getColorFromSlider(sliderValue);
+
+    const wavelengthNM = maxWavelengthNM - (sliderValue / 100) * (maxWavelengthNM - minWavelengthNM);
+
+    const frequencyRelative = 3e8 / (wavelengthNM * 1e-9);
+
+    infoDisplay.textContent =
+      `Lunghezza d'onda: ${wavelengthNM.toFixed(1)} nm | Frequenza: ${frequencyRelative.toExponential(2)} Hz`;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+
+    const k = (2 * Math.PI) / wavelength;
+    const phase = speedFactor * frequency * time;
+
+    // Campo elettrico
+    ctx.strokeStyle = "red";
+    ctx.beginPath();
+    for (let x = 0; x <= width; x++) {
+      const y = centerY + amplitude * Math.sin(k * x - phase);
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Campo magnetico
+    ctx.strokeStyle = "blue";
+    ctx.beginPath();
+    for (let x = 0; x <= width; x++) {
+      const offset = amplitude * Math.sin(k * x - phase + Math.PI / 2);
+      const y = centerY + 100;
+      x === 0 ? ctx.moveTo(x + offset, y) : ctx.lineTo(x + offset, y);
+    }
+    ctx.stroke();
+
+    // Fotone
+    const xPhoton = width / 2; // Sempre al centro orizzontalmente
+const yPhoton = centerY + amplitude * Math.sin((2 * Math.PI / wavelength) * xPhoton - speedFactor * frequency * time);
+
+ctx.beginPath();
+ctx.fillStyle = photonColor;
+ctx.arc(xPhoton, yPhoton, 8, 0, 2 * Math.PI);
+ctx.fill();
+
+  }
+
+  function animate() {
+    draw();
+    time += 1.5;
+    requestAnimationFrame(animate);
+  }
+
+  spectrumSlider.addEventListener("input", () => {
+    const value = parseInt(spectrumSlider.value);
+    updateWaveParams(value);
+  });
+
+  updateWaveParams(0);
+  animate();
+</script>
+
+</body>
+</html>
